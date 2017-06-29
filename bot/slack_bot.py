@@ -1,7 +1,6 @@
 import time
 import logging
 import traceback
-import json
 
 from slack_clients import SlackClients
 from slackclient import SlackClient
@@ -28,7 +27,7 @@ class SlackBot(object):
         if token is not None:
             self.clients = SlackClients(token)
 
-    def start(self, resource):
+    def start(self, resource, bot_data):
         """Creates Slack Web and RTM clients for the given Resource
         using the provided API tokens and configuration, then connects websocket
         and listens for RTM events.
@@ -49,9 +48,6 @@ class SlackBot(object):
                 self.clients.rtm.server.domain))
       
             #DJS
-            with open("bot.json", 'r') as f:
-                bot_data = json.load(f)
-
             persona_clients = {}
             for i in bot_data['tokens']:
                 persona_clients[i['name']] = SlackClient(i['token'])

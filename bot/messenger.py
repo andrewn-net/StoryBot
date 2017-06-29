@@ -48,15 +48,22 @@ class Messenger(object):
 
 
     #Get list of all channels from team
-    def get_channel_list(sc):
+    def get_channel_list(self,sc):
         channel_list = sc.api_call("channels.list")
         channel_list = json.dumps(channel_list)
         channel_list = json.loads(str(channel_list))
         return channel_list
 
+    #Get list of all groups from team
+    def get_group_list(self,sc):
+        group_list = sc.api_call("groups.list")
+        group_list = json.dumps(group_list)
+        group_list = json.loads(str(group_list))
+        return group_list
+
     #Looks up channel ID from a name
     #Opportunity to cache the channel list to avoid calling it so much?
-    def get_channel_id_from_name(sc,name,channel_list):
+    def get_channel_id_from_name(self,sc,name,channel_list):
         for i in channel_list['channels']:
             if (i['name'] == name):
                 return i['id']
@@ -75,28 +82,18 @@ class Messenger(object):
      #   logger.debug('COMPLEX Sending msg: %s to channel: %s' % (msg, channel_id))
      #   channel = self.clients.rtm.server.channels.find(channel_id)
 
-        messages = []
-   #     ts_counter = 0
 
         #just change the args if this works
-        channel_id=0
+        channel_id=0        
 
-   #     channel_list = self.get_channel_list(persona_clients["bot"])
- 
-        #BAD!  Just get the helper functions working in this Bot like the script
-        #Also some weirdness around playback for existing Groups - don't think we ever called
-        #group searches in the script version
-        channel_list = persona_clients['bot'].api_call("channels.list")
-        channel_list = json.dumps(channel_list)
-        channel_list = json.loads(str(channel_list))
+        messages = []
+        channel_list = self.get_channel_list(persona_clients['bot'])
+        group_list = self.get_group_list(persona_clients['bot'])
 
-        group_list = persona_clients['bot'].api_call("groups.list")
-        group_list = json.dumps(group_list)
-        group_list = json.loads(str(group_list))
 
         for i in bot_data:
             delay=0
-            item=i['item']
+            item=i['item']  
             type=i['type']
             target_item=0
             channel=i['channel']
@@ -117,7 +114,6 @@ class Messenger(object):
             if 'attachments' in i:
                 attachments = i['attachments']
 
-   #         channel_id = self.get_channel_id_from_name(persona_clients['bot'],channel,channel_list)
             ##Easier way to detect if this is a channel or group than these loops?
             for j in channel_list['channels']:
                 if (j['name'] == channel):
@@ -131,23 +127,57 @@ class Messenger(object):
             time.sleep(delay)   
             
             if type == "message":
-                result = persona_clients[username].api_call("chat.postMessage",username=username, channel=channel_id,text=text,attachments=attachments,as_user="true",link_names=1,unfurl_links="true")
+                result = persona_clients[username].api_call(
+                    "chat.postMessage",
+                    username=username, 
+                    channel=channel_id,
+                    text=text,
+                    attachments=attachments,
+                    as_user="true",
+                    link_names=1,
+                    unfurl_links="true")
             
             if type == "bot":
                 if 'icon_emoji' in i:
                     icon_emoji=i['icon_emoji']   
-                result = persona_clients['bot'].api_call("chat.postMessage",username=username,channel=channel_id,text=text,attachments=attachments, icon_emoji=icon_emoji, as_user="false", link_names=1,unfurl_links="true")
+                result = persona_clients['bot'].api_call(
+                    "chat.postMessage",
+                    username=username,
+                    channel=channel_id,
+                    text=text,
+                    attachments=attachments, 
+                    icon_emoji=icon_emoji, 
+                    as_user="false", 
+                    link_names=1,
+                    unfurl_links="true")
             
             if type == "reply":
-                result = persona_clients[username].api_call("chat.postMessage",channel=messages[target_item][3],text=text,as_user="true",thread_ts=messages[target_item][2],attachments=attachments,link_names=1,unfurl_links="true")
+                result = persona_clients[username].api_call(
+                    "chat.postMessage",
+                    channel=messages[target_item][3],
+                    text=text,
+                    as_user="true",
+                    thread_ts=messages[target_item][2],
+                    attachments=attachments,
+                    link_names=1,
+                    unfurl_links="true")
             
             if type == "reaction":
                 if (messages[target_item][1] == "post"):
-                    result = persona_clients[username].api_call("reactions.add",channel=messages[target_item][3],name=reaction,file=messages[target_item][2])
+                    result = persona_clients[username].api_call(
+                        "reactions.add",
+                        channel=messages[target_item][3],
+                        name=reaction,
+                        file=messages[target_item][2])
                 else:
-                    result = persona_clients[username].api_call("reactions.add",channel=messages[target_item][3],name=reaction,timestamp=messages[target_item][2])  
+                    result = persona_clients[username].api_call(
+                        "reactions.add",
+                        channel=messages[target_item][3],
+                        name=reaction,
+                        timestamp=messages[target_item][2])  
             if type == "post":
-                result = persona_clients[username].api_call("files.upload", channels=channel_id,filetype="post",initial_comment=text,content=i['content'],title=i['title'])
+                result = persona_clients[username].api_call(
+                    "files.upload", channels=channel_id,filetype="post",initial_comment=text,content=i['content'],title=i['title'])
 
             if type == "share":
                 if 'target_item' in i:
@@ -165,7 +195,6 @@ class Messenger(object):
                     messages.append((item,type,result.get('file')['id'],result.get('file')['channels']))
                 else:
                     messages.append((item, type, result.get('ts'), result.get('channel')))
-           #     ts_counter += 1
             else:
                 print "Playback Error:",result.get('error'),"for #",channel,"from",username
                 messages.append((item,type,result.get('error')))

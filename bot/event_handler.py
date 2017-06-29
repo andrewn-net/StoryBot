@@ -37,6 +37,7 @@ class RtmEventHandler(object):
 
             msg_txt = event['text']
 
+            # @ mention or DM commands 
             if self.clients.is_bot_mention(msg_txt) or self._is_direct_message(event['channel']):
                 # e.g. user typed: "@pybot tell me a joke!"
                 if 'help' in msg_txt:
@@ -56,6 +57,7 @@ class RtmEventHandler(object):
                     self.messages = []
                 elif 'reload' in msg_txt:
                     self.bot_data = self.msg_writer.reload_config()
+                    self.
                 elif 'message list' in msg_txt:
                     print self.messages
                 elif re.search('playback', msg_txt):
@@ -67,6 +69,8 @@ class RtmEventHandler(object):
          #               self.messages = self.msg_writer.send_complex_message(event['channel'], self.bot_data['responses'][phrase], self.persona_clients)
                 else:
                     self.msg_writer.write_prompt(event['channel'])
+
+            #Channel trigger commands
             elif msg_txt in self.bot_data['responses']:
                 self.messages = self.msg_writer.send_complex_message(event['channel'], self.bot_data['responses'][msg_txt], self.persona_clients)
 
