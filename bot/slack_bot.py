@@ -27,7 +27,9 @@ class SlackBot(object):
         if token is not None:
             self.clients = SlackClients(token)
 
-    def start(self, resource, bot_data):
+     #   self.bot_data = None
+
+    def start(self, resource, config_file):
         """Creates Slack Web and RTM clients for the given Resource
         using the provided API tokens and configuration, then connects websocket
         and listens for RTM events.
@@ -48,15 +50,17 @@ class SlackBot(object):
                 self.clients.rtm.server.domain))
       
             #DJS
-            persona_clients = {}
-            for i in bot_data['tokens']:
-                persona_clients[i['name']] = SlackClient(i['token'])
+       #     persona_clients = {}
+       #     for i in bot_data['tokens']:
+       #         persona_clients[i['name']] = SlackClient(i['token'])
 
-            messages = []
+
+            #do i need this or just make it part of the event handleR? or messenger?
+       #    messages = []
             #DJS
 
             msg_writer = Messenger(self.clients)
-            event_handler = RtmEventHandler(self.clients, msg_writer, bot_data, persona_clients, messages)
+            event_handler = RtmEventHandler(self.clients, msg_writer, config_file)
 
             while self.keep_running:
                 for event in self.clients.rtm.rtm_read():

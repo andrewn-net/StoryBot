@@ -42,6 +42,10 @@ class Messenger(object):
         txt = ":face_with_head_bandage: my maker didn't handle this error very well:\n>```{}```".format(err_msg)
         self.send_message(channel_id, txt)
 
+    def write_message_list(self, channel_id, message_list):
+        bot_uid = self.clients.bot_user_id()
+        self.send_message(channel_id,message_list)
+
     #
     #here there be dragons!!
     #
@@ -86,9 +90,13 @@ class Messenger(object):
         #just change the args if this works
         channel_id=0        
 
+
         messages = []
-        channel_list = self.get_channel_list(persona_clients['bot'])
-        group_list = self.get_group_list(persona_clients['bot'])
+   #     channel_list = self.get_channel_list(persona_clients['bot'])
+        channel_list = self.get_channel_list(self.clients.rtm)
+        group_list = self.get_group_list(self.clients.rtm)
+
+   #     print channel_list
 
 
         for i in bot_data:
@@ -140,7 +148,7 @@ class Messenger(object):
             if type == "bot":
                 if 'icon_emoji' in i:
                     icon_emoji=i['icon_emoji']   
-                result = persona_clients['bot'].api_call(
+                result = self.clients.rtm.api_call(
                     "chat.postMessage",
                     username=username,
                     channel=channel_id,
@@ -196,23 +204,26 @@ class Messenger(object):
                 else:
                     messages.append((item, type, result.get('ts'), result.get('channel')))
             else:
-                print "Playback Error:",result.get('error'),"for #",channel,"from",username
+                logger.error("Playback Error: %s for #%s from %s",results.get('error'),channel,username)
+              #  print "Playback Error:",result.get('error'),"for #",channel,"from",username
                 messages.append((item,type,result.get('error')))
 
             if 'pin' in i:
                 result = persona_clients[username].api_call("pins.add",channel=channel_id,timestamp=messages[item][2])
 
-        print "Story Complete"
 
         filename = time.strftime("%Y%m%d_%H%M%S")
-        print filename
-        with open(filename, 'w') as f:
+       # print filename,".log"
+        with open('logs/' + channel + '-' + filename, 'w') as f:
             json.dump(messages, f)
+
+        logger.info("Story Complete - %s-%s",channel,filename)
+
 
         return messages
 
     def cleanup (self, channel_id, persona_clients, messages):
-        print "CLEANING UP", messages
+        logger.info("CLEANING UP %s", messages)
 
         for i in messages:
             if i[1] == "post":
@@ -221,6 +232,7 @@ class Messenger(object):
                 result = persona_clients['dsmock'].api_call("chat.delete",ts=i[2],channel=i[3])
 
             if not result.get('ok'):
+                logger.error("Error cleaning up: %s",result.get('errors'))
                 print result.get('errors')
 
 
