@@ -65,7 +65,6 @@ class RtmEventHandler(object):
                     self.msg_writer.cleanup(event['channel'], self.persona_clients, self.messages)
                     self.messages = []
                 elif 'reload' in msg_txt:
-                  #  self.bot_data = self.msg_writer.reload_config()
                   self.load_config(self.config_file)
                 elif 'message list' in msg_txt:
                     print self.messages

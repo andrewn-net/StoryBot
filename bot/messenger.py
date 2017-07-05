@@ -121,6 +121,8 @@ class Messenger(object):
                 delay = i['delay']
             if 'attachments' in i:
                 attachments = i['attachments']
+            if 'icon_emoji' in i:
+                icon_emoji=i['icon_emoji'] 
 
             ##Easier way to detect if this is a channel or group than these loops?
             for j in channel_list['channels']:
@@ -198,6 +200,7 @@ class Messenger(object):
                         target_channel = i['target_channel']
                 result = persona_clients[username].api_call("chat.shareMessage",channel=target_channel,timestamp=target_ts,text=text,share_channel=channel_id)
 
+            #Message list consists of (item_id, type, timestamp or file id, channel)
             if result.get('ok'):
                 if type == "post":
                     messages.append((item,type,result.get('file')['id'],result.get('file')['channels']))
@@ -205,7 +208,6 @@ class Messenger(object):
                     messages.append((item, type, result.get('ts'), result.get('channel')))
             else:
                 logger.error("Playback Error: %s for #%s from %s",results.get('error'),channel,username)
-              #  print "Playback Error:",result.get('error'),"for #",channel,"from",username
                 messages.append((item,type,result.get('error')))
 
             if 'pin' in i:
@@ -213,13 +215,9 @@ class Messenger(object):
 
 
         filename = time.strftime("%Y%m%d_%H%M%S")
-       # print filename,".log"
         with open('logs/' + channel + '-' + filename, 'w') as f:
             json.dump(messages, f)
-
         logger.info("Story Complete - %s-%s",channel,filename)
-
-
         return messages
 
     def cleanup (self, channel_id, persona_clients, messages):
@@ -233,6 +231,5 @@ class Messenger(object):
 
             if not result.get('ok'):
                 logger.error("Error cleaning up: %s",result.get('errors'))
-                print result.get('errors')
 
 
