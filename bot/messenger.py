@@ -87,7 +87,7 @@ class Messenger(object):
             bot_data = json.load(f)
         return bot_data
 
-    def send_complex_message(self, channel_id, bot_data, persona_clients):
+    def send_complex_message(self, event, bot_data, persona_clients):
 
      #   if isinstance(channel_id, dict):
      #       channel_id = channel_id['id']
@@ -95,8 +95,8 @@ class Messenger(object):
      #   channel = self.clients.rtm.server.channels.find(channel_id)
 
 
-        #just change the args if this works
-        channel_id=0        
+        #do we need this given the config load of channels?
+        channel_id=event['channel']        
 
 
         #Blank message history
@@ -238,6 +238,8 @@ class Messenger(object):
                     channel=channel_id,
                     timestamp=messages[item][2])
 
+        #add the triggering message to the queue so we can clean it up - SLICK!
+        messages.append((item+1,'trigger',event['ts'],event['channel']))
 
         #Write the message history to disk for future cleanup - this needs some work! Let's make this more user friendly to do!!!!
         filename = './logs/' + channel + '-' + time.strftime("%Y%m%d_%H%M%S")
@@ -255,7 +257,7 @@ class Messenger(object):
         return messages
 
     #Use this to go through a message list and delete everthing
-    def cleanup (self, channel_id, persona_clients, messages):
+    def cleanup (self, persona_clients, messages):
         logger.info("CLEANING UP %s", messages)
 
         for i in messages:

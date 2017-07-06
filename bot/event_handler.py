@@ -64,14 +64,21 @@ class RtmEventHandler(object):
                     path = './logs/' + re.split('cleanup ',msg_txt)[1].strip()
                     with open(path,'r') as f:
                         messages_loaded = json.load(f)
-                        self.msg_writer.cleanup(event['channel'], self.persona_clients, messages_loaded)
+
+                        #add the triggering message to the queue so we can clean it up - SLICK!
+                        messages_loaded.append((None,'trigger',event['ts'],event['channel']))
+                        self.msg_writer.cleanup(self.persona_clients, messages_loaded)
                         os.remove(path)
                 #cleanup with no args uses current session messages list
                 elif 'cleanup' in msg_txt:
-                    self.msg_writer.cleanup(event['channel'], self.persona_clients, self.messages)
+                    self.messages.append((None,'trigger',event['ts'],event['channel']))
+                    self.msg_writer.cleanup(self.persona_clients, self.messages)
                     self.messages = []
                 elif 'reload' in msg_txt:
                   self.load_config(self.config_file)
+                  tmp_messages = []
+                  tmp_messages.append((None,'trigger',event['ts'],event['channel']))
+                  self.msg_writer.cleanup(self.persona_clients, tmp_messages)
                 elif 'message list' in msg_txt:
                     print self.messages
                     self.msg_writer.write_message_list(event['channel'],self.messages)
@@ -87,7 +94,7 @@ class RtmEventHandler(object):
 
             #Channel trigger commands - need to strip any leading / because Excel sheet names can't contain that - but we still need a command trigger!
             elif msg_txt.strip('/') in self.bot_data['Triggers']:
-                self.messages = self.msg_writer.send_complex_message(event['channel'], self.bot_data['Triggers'][msg_txt.strip('/')], self.persona_clients)
+                self.messages = self.msg_writer.send_complex_message(event, self.bot_data['Triggers'][msg_txt.strip('/')], self.persona_clients)
 
     def _is_direct_message(self, channel):
         """Check if channel is a direct message channel
