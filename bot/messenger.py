@@ -4,6 +4,8 @@ import logging
 import random
 import time
 import json
+import os
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,12 @@ class Messenger(object):
     def write_message_list(self, channel_id, message_list):
         bot_uid = self.clients.bot_user_id()
         self.send_message(channel_id,message_list)
+
+    #wait, how do I kill this thing again?
+    def goodnight(self, channel_id):     
+        txt = ":sleeping: Daisy, Daisy, give me your answer do. I'm half crazy all for the love of you. It won't be a stylish marriage, I can't afford a carriage. But you'll look sweet upon the seat of a bicycle built for two. :sleeping:"
+        self.send_message(channel_id, txt)
+   #     exit()
 
     #
     #here there be dragons!!
@@ -91,14 +99,14 @@ class Messenger(object):
         channel_id=0        
 
 
+        #Blank message history
         messages = []
-   #     channel_list = self.get_channel_list(persona_clients['bot'])
+
+        #Pull channel & group lists once to reduce API calls - use these to go from name to ID where needed
         channel_list = self.get_channel_list(self.clients.rtm)
         group_list = self.get_group_list(self.clients.rtm)
 
-   #     print channel_list
-
-
+        #Go through each item in the trigger - set some defaults in case they aren't provided
         for i in bot_data:
             delay=0
             item=i['item']  
@@ -112,13 +120,19 @@ class Messenger(object):
             icon_emoji=""
 
             if 'target_item' in i:
-                target_item=i['target_item']
+                if np.isnan(i['target_item']): #oddness check due to DataFrame float conversions - fix this
+                    target_item=0
+                else:
+                    target_item= int(i['target_item'])
             if 'text' in i:
                 text = i['text']
             if 'reaction' in i:
                 reaction = i['reaction']
             if 'delay' in i:
-                delay = i['delay']
+                if np.isnan(i['delay']): #oddness check due to DataFrame float conversions - fix this
+                    delay = 0
+                else:
+                    delay = int(i['delay'])
             if 'attachments' in i:
                 attachments = i['attachments']
             if 'icon_emoji' in i:
@@ -136,6 +150,7 @@ class Messenger(object):
             #artificial delay, default is 0
             time.sleep(delay)   
             
+            #Now for the actual actioning via API!!
             if type == "message":
                 result = persona_clients[username].api_call(
                     "chat.postMessage",
@@ -148,8 +163,6 @@ class Messenger(object):
                     unfurl_links="true")
             
             if type == "bot":
-                if 'icon_emoji' in i:
-                    icon_emoji=i['icon_emoji']   
                 result = self.clients.rtm.api_call(
                     "chat.postMessage",
                     username=username,
@@ -172,6 +185,7 @@ class Messenger(object):
                     link_names=1,
                     unfurl_links="true")
             
+            #Reactions use different args if against a message or post/file
             if type == "reaction":
                 if (messages[target_item][1] == "post"):
                     result = persona_clients[username].api_call(
@@ -185,10 +199,17 @@ class Messenger(object):
                         channel=messages[target_item][3],
                         name=reaction,
                         timestamp=messages[target_item][2])  
+
             if type == "post":
                 result = persona_clients[username].api_call(
-                    "files.upload", channels=channel_id,filetype="post",initial_comment=text,content=i['content'],title=i['title'])
+                    "files.upload", 
+                    channels=channel_id,
+                    filetype="post",
+                    initial_comment=text,
+                    content=i['content'],
+                    title=i['title'])
 
+            #This probabily needs another look! It's tough anyway, need to specificy specific timestamps
             if type == "share":
                 if 'target_item' in i:
                     target_ts=messages[target_item][2]
@@ -200,26 +221,33 @@ class Messenger(object):
                         target_channel = i['target_channel']
                 result = persona_clients[username].api_call("chat.shareMessage",channel=target_channel,timestamp=target_ts,text=text,share_channel=channel_id)
 
-            #Message list consists of (item_id, type, timestamp or file id, channel)
+            #Message list consists of (item_id, type, timestamp or file id, channel) for recall.  Build it up here for references and cleanup
             if result.get('ok'):
                 if type == "post":
                     messages.append((item,type,result.get('file')['id'],result.get('file')['channels']))
                 else:
                     messages.append((item, type, result.get('ts'), result.get('channel')))
             else:
-                logger.error("Playback Error: %s for #%s from %s",results.get('error'),channel,username)
+                logger.error("Playback Error: %s for #%s from %s",result.get('error'),channel,username)
                 messages.append((item,type,result.get('error')))
 
+            #Pin needs to happen after all this so we have a timestamp to use
             if 'pin' in i:
-                result = persona_clients[username].api_call("pins.add",channel=channel_id,timestamp=messages[item][2])
+                result = persona_clients[username].api_call(
+                    "pins.add",
+                    channel=channel_id,
+                    timestamp=messages[item][2])
 
 
+        #Write the message history to disk for future cleanup - this needs some work! Let's make this more user friendly to do!!!!
         filename = time.strftime("%Y%m%d_%H%M%S")
-        with open('logs/' + channel + '-' + filename, 'w') as f:
+    #    with open('/Users/dsmock/Documents/StoryBot/logs/' + channel + '-' + filename, 'w') as f:
+        with open('./logs/' + channel + '-' + filename, 'w') as f:
             json.dump(messages, f)
         logger.info("Story Complete - %s-%s",channel,filename)
         return messages
 
+    #Use this to go through a message list and delete everthing
     def cleanup (self, channel_id, persona_clients, messages):
         logger.info("CLEANING UP %s", messages)
 

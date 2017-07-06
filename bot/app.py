@@ -25,14 +25,6 @@ if __name__ == "__main__":
     elif not os.path.isfile(sys.argv[1]):
         logging.critical('WOMP WOMP config file {} doesn\'t exist'.format(sys.argv[1]))
         exit()
- #   elif os.path.isfile(sys.argv[1]):
- #       logging.info('Loading config file: {}'.format(sys.argv[1]))
- #       with open(sys.argv[1], 'r') as f:
- #           bot_data = json.load(f)
- #   else:
- #       logging.critical('WOMP WOMP config file {} doesn\'t exist'.format(sys.argv[1]))
- #       exit()
-
 
     slack_token = os.getenv("SLACK_TOKEN", "")
     logging.info("token: {}".format(slack_token))
