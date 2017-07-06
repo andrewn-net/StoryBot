@@ -240,11 +240,18 @@ class Messenger(object):
 
 
         #Write the message history to disk for future cleanup - this needs some work! Let's make this more user friendly to do!!!!
-        filename = time.strftime("%Y%m%d_%H%M%S")
+        filename = './logs/' + channel + '-' + time.strftime("%Y%m%d_%H%M%S")
     #    with open('/Users/dsmock/Documents/StoryBot/logs/' + channel + '-' + filename, 'w') as f:
-        with open('./logs/' + channel + '-' + filename, 'w') as f:
+   #     with open('./logs/' + channel + '-' + filename, 'w') as f:
+        if not os.path.exists(os.path.dirname(filename)):
+             try:
+                os.makedirs(os.path.dirname(filename))
+             except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        with open(filename, 'w') as f:
             json.dump(messages, f)
-        logger.info("Story Complete - %s-%s",channel,filename)
+        logger.info("Story Complete - %s",filename)
         return messages
 
     #Use this to go through a message list and delete everthing
